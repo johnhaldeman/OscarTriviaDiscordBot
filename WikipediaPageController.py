@@ -62,37 +62,48 @@ class WikipediaPageController(object):
         """
         return str.split('(')[0].split('[')[0]
 
-    def parseWinnerFilm(self, filmRow):
+    def parseWinnerFilm(self, filmRow, minNumAwards, afterYear, beforeYear):
         """Given a row from the film table, create a film, populate it, and append to films list
         filmRow -- The BeautifulSoup element for the table row (tr)
         """
         data = filmRow.find_all('td')
         if len(data) > 0:
+            numAwards = int(self.getStrippedString(data[2].get_text()))
+            year = int(self.getStrippedString(data[1].get_text()))
             anchor = data[0].select('a')[0]
-            film = Film(self.getStrippedString(data[0].get_text()),
-                        int(self.getStrippedString(data[1].get_text())), 
-                        int(self.getStrippedString(data[2].get_text())), 
-                        int(self.getStrippedString(data[3].get_text())), 
-                        anchor['href'])
-            self.films.append(film)
+            title = self.getStrippedString(data[0].select('a')[0]['title']).strip()
 
-    def parseFilmTable(self, elem):
+            if year >= afterYear and year <= beforeYear and numAwards >= minNumAwards :
+                film = Film(title,
+                            year, 
+                            numAwards, 
+                            int(self.getStrippedString(data[3].get_text())), 
+                            anchor['href'])
+                self.films.append(film)
+
+
+    def parseFilmTable(self, elem, minNumAwards, afterYear, beforeYear):
         """Given the table of Oscar Winners, parse out the list of films and their statistics
         filmRow -- The BeautifulSoup element for the table row (tr)
         """
         filmRows = elem.find_all('tr')
         for filmRow in filmRows:
-            self.parseWinnerFilm(filmRow)
+            self.parseWinnerFilm(filmRow, minNumAwards, afterYear, beforeYear)
 
-    def parseListOfFilms(self, header):
+    def parseListOfFilms(self, header, minNumAwards, afterYear, beforeYear):
         """Given the the list of films section header, start parsing the list
         header -- The list of films header
         """
         for elem in header.next_siblings:
             if elem.name and elem.name == 'table':
-                self.parseFilmTable(elem)
+                self.parseFilmTable(elem, minNumAwards, afterYear, beforeYear)
 
-    def getAcademyAwardWinners(self, minNumAwards, afterYear):
+    def getAcademyAwardWinners(self, minNumAwards, afterYear, beforeYear):
+        """Get the academy award winners from the Wikipedia list site according to the desired criteria
+        minNumAwards -- The minimum number of awards won
+        afterYear -- The year after which the film should be made (inclusive)
+        beforeYear -- The year before which the film should be made (inclusive)
+        """
         f = urllib.request.urlopen(ACADEMY_AWARD_WINNER_LIST_URI)
         soup = BeautifulSoup(f, "html.parser")
         self.films = list()
@@ -100,7 +111,7 @@ class WikipediaPageController(object):
         for header in soup.find_all(['h2']):
             span = header.span
             if span != None and span['id'] == 'List_of_films':
-                self.parseListOfFilms(header)
+                self.parseListOfFilms(header, minNumAwards, afterYear, beforeYear)
         return self.films
 
 
