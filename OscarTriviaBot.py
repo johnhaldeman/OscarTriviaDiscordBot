@@ -1,6 +1,13 @@
+
 from WikipediaPageController import WikipediaPageController
 
 pageController = WikipediaPageController()
 
-keywords = pageController.getAcademyAwardWinners(0, 0)
+
+films = pageController.getAcademyAwardWinners(0, 0)
+
+for film in films:
+    print(film)
+    print()
+
 
