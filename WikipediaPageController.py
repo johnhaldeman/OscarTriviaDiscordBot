@@ -45,7 +45,8 @@ class WikipediaPageController(object):
 
         for header in soup.find_all(['h2']):
             span = header.span
-            if span != None and span['id'] in ('Plot', 'Cast'):
+            #if span != None and span['id'] in ('Plot', 'Cast'):
+            if span != None and span['id'] in ('Plot'):
                 for elem in header.next_siblings:
                     if elem.name and elem.name.startswith('h'):
                         break;
