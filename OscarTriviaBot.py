@@ -2,9 +2,9 @@ from WikipediaPageController import WikipediaPageController
 from random import randrange
 from random import shuffle
 from random import sample
+import sys
 
-
-pageController = WikipediaPageController()
+'''pageController = WikipediaPageController()
 
 films = pageController.getAcademyAwardWinners(5, 1980, 3000)
 index = randrange(0, len(films), 1)
@@ -30,4 +30,27 @@ for i in range(10):
 if guessed:
     print ("Good Job!")
 else:
-    print ("Better Luck Next Time! The answer was: " + film.title)
+    print ("Better Luck Next Time! The answer was: " + film.title)'''
+
+
+
+import discord
+import asyncio
+
+client = discord.Client()
+
+@client.event
+async def on_ready():
+    print('Logged in as')
+    print(client.user.name)
+    print(client.user.id)
+    print('------')
+
+@client.event
+async def on_message(message):
+    if message.content.startswith('marco'):
+        await client.send_message(message.channel, 'polo')
+
+
+client.run(sys.argv[1])
+
