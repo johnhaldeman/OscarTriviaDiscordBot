@@ -41,12 +41,12 @@ class WikipediaPageController(object):
         f = urllib.request.urlopen(url)
         soup = BeautifulSoup(f, "html.parser")
 
-        keywords = set();
+        keywordSetList = list()
 
         for header in soup.find_all(['h2']):
             span = header.span
-            #if span != None and span['id'] in ('Plot', 'Cast'):
-            if span != None and span['id'] in ('Plot'):
+            if span != None and span['id'] in ('Plot', 'Cast'):
+                keywords = set();
                 for elem in header.next_siblings:
                     if elem.name and elem.name.startswith('h'):
                         break;
@@ -55,7 +55,8 @@ class WikipediaPageController(object):
                             text = link.get_text();
                             if not text.startswith('[') and not text == '':
                                 keywords.add(text)
-        return keywords
+                keywordSetList.append(keywords)
+        return keywordSetList
 
     def getStrippedString(self, str):
         """Given a string with special characters in it that appear sometimes in wikipedia, strip the special characters
