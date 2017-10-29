@@ -2,9 +2,9 @@ import unittest
 
 class Test_WikipediaPageController(unittest.TestCase):
     def test_parseOutKeywords(self):
-        from WikipediaPageController import WikipediaPageController
-        pageController = WikipediaPageController()
-        keywords = pageController.parseOutKeywords("https://en.wikipedia.org/wiki/Fantastic_Beasts_and_Where_to_Find_Them_(film)")
+        from WikipediaPageController import Film
+        film = Film("", 1990, 10, 10, "/wiki/Fantastic_Beasts_and_Where_to_Find_Them_(film)")
+        keywords = film.parseOutKeywords()
 
         self.assertTrue('Niffler' in keywords[0])
         self.assertTrue('Newt Scamander' in keywords[0])
