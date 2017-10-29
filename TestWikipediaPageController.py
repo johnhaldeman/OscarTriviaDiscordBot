@@ -6,10 +6,11 @@ class Test_WikipediaPageController(unittest.TestCase):
         pageController = WikipediaPageController()
         keywords = pageController.parseOutKeywords("https://en.wikipedia.org/wiki/Fantastic_Beasts_and_Where_to_Find_Them_(film)")
 
-        self.assertTrue('Niffler' in keywords)
-        self.assertTrue('Newt Scamander' in keywords)
-        self.assertTrue('Eddie Redmayne' in keywords)
-        self.assertFalse('Al Pacino' in keywords)
+        self.assertTrue('Niffler' in keywords[0])
+        self.assertTrue('Newt Scamander' in keywords[0])
+        self.assertTrue('Eddie Redmayne' in keywords[1])
+        self.assertFalse('Tokyo' in keywords[0])
+        self.assertFalse('Al Pacino' in keywords[1])
 
 
     def test_getAcademyAwardWinners1(self):

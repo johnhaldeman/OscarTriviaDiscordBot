@@ -1,4 +1,6 @@
 import urllib.request
+import json
+import collections
 from bs4 import BeautifulSoup
 
 ACADEMY_AWARD_WINNER_LIST_URI = "https://en.wikipedia.org/wiki/List_of_Academy_Award-winning_films"
@@ -6,7 +8,7 @@ ACADEMY_AWARD_WINNER_LIST_URI = "https://en.wikipedia.org/wiki/List_of_Academy_A
 class Film(object):
     """Data Object for a Film"""
 
-    def __init__(self, title,  year, numAwards, numNominations, uri):
+    def __init__(self, title,  year, numAwards, numNominations, uri, **keywords):
         """Construct a Film Object
         tile -- The name of the film
         year -- The year the film was made
@@ -18,27 +20,16 @@ class Film(object):
         self.uri = uri
         self.title = title
         self.numNominations = numNominations
-
-    def __repr__(self):
-        return ("Title: " + self.title + 
-                "\nURI: " + self.uri + 
-                "\nYear: " + str(self.year) + 
-                "\nTitle: " + self.title  + 
-                "\nNumAwards: " + str(self.numAwards) + 
-                "\nNumNominations: " + str(self.numNominations))
+        if ('keywordSetList' in keywords):
+            self.keywordSetList = keywords['keywordSetList']
 
 
-class WikipediaPageController(object):
-    """Used to manage interactions with wikipedia including parsing"""
-    def __init__(self):
-        pass
-
-    def parseOutKeywords(self, url):
+    def parseOutKeywords(self):
         """Using a wikipedia url, parse and return keywords for a film        
         url -- the url to parse
         """
 
-        f = urllib.request.urlopen(url)
+        f = urllib.request.urlopen("https://en.wikipedia.org" + self.uri)
         soup = BeautifulSoup(f, "html.parser")
 
         keywordSetList = list()
@@ -48,7 +39,7 @@ class WikipediaPageController(object):
             if span != None and span['id'] in ('Plot', 'Cast'):
                 keywords = set();
                 for elem in header.next_siblings:
-                    if elem.name and elem.name.startswith('h'):
+                    if elem.name and elem.name == 'h2':
                         break;
                     elif elem.name:
                         for link in elem.select('a'):
@@ -56,7 +47,53 @@ class WikipediaPageController(object):
                             if not text.startswith('[') and not text == '':
                                 keywords.add(text)
                 keywordSetList.append(keywords)
+        self.keywordSetList = keywordSetList
         return keywordSetList
+
+
+    def __repr__(self):
+        retString = (
+            "Title: " + self.title + 
+                "\nURI: " + self.uri + 
+                "\nYear: " + str(self.year) + 
+                "\nTitle: " + self.title  + 
+                "\nNumAwards: " + str(self.numAwards) + 
+                "\nNumNominations: " + str(self.numNominations)
+        )
+        try:
+            if(len(self.keywordSetList) > 0):
+                retString += "\nPlotKeywords: " + ','.join(self.keywordSetList[0])
+            if(len(self.keywordSetList) > 1):
+                retString += "\nCastKeywords: " + ','.join(self.keywordSetList[1])
+        except AttributeError:
+            pass
+        return retString
+
+
+class WikipediaPageController(object):
+    """Used to manage interactions with wikipedia including parsing"""
+    def __init__(self):
+        pass
+
+    def serializeFilmList(self):
+        def defaultHandler(obj):
+            if isinstance(obj, collections.Set):
+                return list(obj)
+            else:
+                return obj.__dict__
+        return json.dumps(self.films, default=defaultHandler)
+
+    def deserializeFilmList(self, str):
+        def asFilms(filmDict):
+            if 'keywordSetList' in filmDict:
+                film = Film(filmDict['title'], filmDict['year'], filmDict['numAwards'], filmDict['numNominations'], filmDict['uri'], keywordSetList=filmDict['keywordSetList'])
+            else:
+                film = Film(filmDict['title'], filmDict['year'], filmDict['numAwards'], filmDict['numNominations'], filmDict['uri'])
+            return film
+
+        self.films = json.loads(str, object_hook = asFilms)
+        return self.films
+
 
     def getStrippedString(self, str):
         """Given a string with special characters in it that appear sometimes in wikipedia, strip the special characters
@@ -82,7 +119,6 @@ class WikipediaPageController(object):
                             int(self.getStrippedString(data[3].get_text())), 
                             anchor['href'])
                 self.films.append(film)
-
 
     def parseFilmTable(self, elem, minNumAwards, afterYear, beforeYear):
         """Given the table of Oscar Winners, parse out the list of films and their statistics

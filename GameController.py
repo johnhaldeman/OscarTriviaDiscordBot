@@ -3,6 +3,7 @@ from WikipediaPageController import Film
 from random import randrange
 from random import shuffle
 from random import sample
+import copy
 
 MAX_GUESSES = 10
 WIKIPEDIA_BASE_URI = "https://en.wikipedia.org"
@@ -30,10 +31,11 @@ class Game(object):
     GS_SUCCESS = 3;
     GS_FAILED = 4;
 
-    def __init__(self, user):
+    def __init__(self, user, films):
         self.user = user
         self.numGuesses = 0
-        self.state = Game.GS_NONE
+        self.state = Game.GS_NONE        
+        self.films = copy.deepcopy(films)
         self.currentFilm = None
 
     def computeState(self, comm):
@@ -52,12 +54,10 @@ class Game(object):
                 self.numGuesses = 0
 
     def initGame(self):
-        pageController = WikipediaPageController()
-        self.films = pageController.getAcademyAwardWinners(MIN_AWARDS, MIN_YEAR, MAX_YEAR)
         index = randrange(0, len(self.films), 1)
         self.currentFilm = self.films[index]
         del(self.films[index])
-        self.keywordSetList =  pageController.parseOutKeywords("https://en.wikipedia.org" + self.currentFilm.uri)
+        self.keywordSetList =  self.currentFilm.keywordSetList
 
     def nextClue(self):
         if len(self.keywordSetList[0]) > 0:
@@ -74,17 +74,16 @@ class Game(object):
 class GameController(object):
     """Maintains a registry of games and controls game state"""
 
-    def __init__(self):
-        self.games = dict();
-        self.pageController = WikipediaPageController()
-        self.films = self.pageController.getAcademyAwardWinners(5, 1980, 3000)
+    def __init__(self, films):
+        self.games = dict()
+        self.films = films
 
     def processCommand(self, command, user):
         comm = command.lower()
         if user in self.games:
             currGame = self.games[user]
         else:
-            currGame = Game(user)
+            currGame = Game(user, self.films)
             self.games[user] = currGame
         if comm == '%help':
             return HELP_TEXT
