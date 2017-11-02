@@ -1,9 +1,12 @@
 from WikipediaPageController import WikipediaPageController
 from WikipediaPageController import Film
+from GameFileHandler import GameFileHandler
 from random import randrange
 from random import shuffle
 from random import sample
 import copy
+import json
+import collections
 
 MAX_GUESSES = 10
 WIKIPEDIA_BASE_URI = "https://en.wikipedia.org"
@@ -19,6 +22,8 @@ This is how it works:
 3) You guess the film's name based on those clues
 I keep giving you clues and you keep guessing. If you get the answer in under 10 guesses, you win!
 
+You might be wondering how I pick the movies and get the clues. Well, I get that information automatically from Wikipedia. Sometimes I make good choices, sometimes I don't. Hopefully I make mostly good ones.
+
 To start playing, type %start
 '''
 
@@ -30,22 +35,29 @@ class Game(object):
     GS_GUESSING = 2;
     GS_SUCCESS = 3;
     GS_FAILED = 4;
+    GS_END = 5;
 
     def __init__(self, user, films):
         self.user = user
         self.numGuesses = 0
         self.state = Game.GS_NONE        
         self.films = copy.deepcopy(films)
+        self.guessedRight = 0
+        self.totalQuestions = 0
         self.currentFilm = None
 
     def computeState(self, comm):
-        if comm == '%start' and self.state != Game.GS_GUESSING:
+        if len(self.films) == 0:
+            self.state = Game.GS_END
+        elif comm == '%start' and self.state != Game.GS_GUESSING:
             self.initGame()        
             self.state = Game.GS_START
+            self.totalQuestions = self.totalQuestions + 1
         elif self.state == Game.GS_GUESSING or self.state == Game.GS_START:
             if self.currentFilm.title.lower().strip() == comm.lower().strip():
                 self.state = Game.GS_SUCCESS
                 self.numGuesses = 0
+                self.guessedRight = self.guessedRight + 1
             elif self.numGuesses < MAX_GUESSES + 1:
                 self.numGuesses = self.numGuesses + 1
                 self.state = Game.GS_GUESSING
@@ -77,11 +89,50 @@ class GameController(object):
     def __init__(self, films):
         self.games = dict()
         self.films = films
+        self.fileHandler = GameFileHandler()
+
+    def serializeGame(self, game):
+        def defaultHandler(obj):
+            if isinstance(obj, collections.Set):
+                return list(obj)
+            else:
+                return obj.__dict__
+        return json.dumps(game, default=defaultHandler)
+
+    def deserializeGame(self, gameData):
+        def asGame(gameDict):
+            if 'title' in gameDict:
+                return Film(gameDict['title'], gameDict['year'], gameDict['numAwards'], gameDict['numNominations'], gameDict['uri'], keywordSetList=gameDict['keywordSetList'])
+            elif 'user' in gameDict:
+                game = Game(gameDict['user'], gameDict['films'])
+                game.numGuesses = gameDict['numGuesses']
+                game.state = gameDict['state']
+                game.currentFilm = gameDict['currentFilm']
+                game.keywordSetList = gameDict['keywordSetList']
+                game.guessedRight = gameDict['guessedRight']
+                return game
+            else:
+                print("Can't deserialize object: " + gameData)
+                return None
+
+        game = json.loads(gameData, object_hook = asGame)
+        for film in game.films:
+            # Weird thing - Deserialization created a whole new game. We just want it to point to the game in the current list
+            if film.title == game.currentFilm.title:
+                game.currentFilm = film
+                game.keywordSetList = film.keywordSetList
+
+        return game
+
 
     def processCommand(self, command, user):
         comm = command.lower()
         if user in self.games:
             currGame = self.games[user]
+        elif self.fileHandler.isSavedGame(user):
+            gameData = self.fileHandler.readSerializedGame(user)
+            currGame = self.deserializeGame(gameData)
+            self.games[user] = currGame
         else:
             currGame = Game(user, self.films)
             self.games[user] = currGame
@@ -90,10 +141,15 @@ class GameController(object):
 
         currGame.computeState(command)
 
+        if(currGame.state != Game.GS_NONE):
+            self.fileHandler.writeSerializedGame(user, self.serializeGame(currGame))
+        
         if currGame.state == Game.GS_NONE:
             return "To learn about how to play with oscarbot, type %help"
         elif currGame.state == Game.GS_START:
-            return "Let's start a new game! Your first clue is:\n" + currGame.nextClue()
+            return "Let's start a new game! So far you have guessed " \
+                + str(currGame.guessedRight) + "/" + str(currGame.totalQuestions) + " films correctly. " \
+                + "Your first clue for the next film is:\n" + str(currGame.nextClue())
         elif currGame.state == Game.GS_GUESSING:
             return "Nope, that's not it. Your next clue is:\n" + currGame.nextClue()
         elif currGame.state == Game.GS_SUCCESS:
@@ -103,7 +159,11 @@ class GameController(object):
         elif currGame.state == Game.GS_FAILED:
             return "You've had ten guesses but failed to guess the film. The answer was:\n" \
                 + self.getAnswer(currGame) + ".\n" \
-                + "Type %start to start a new game"
+                + "Type %start to start a new game. There are " + len(currGame.films) + " films left"
+        elif currGame.state == Game.GS_END:
+            return "That's all there is! You've attempted to guess all the films!"
+        
+
 
     def getAnswer(self, game):
         return game.currentFilm.title + "\n" + WIKIPEDIA_BASE_URI + game.currentFilm.uri
