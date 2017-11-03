@@ -24,5 +24,8 @@ python OscarTriviaBot.py run AAABBBCCCCDDD
 ```
 replacing `AAABBBCCCCDDD` with your bot's client secret
 
-
+# Dependancies
+1. Python 3.6
+2. [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/)
+3. [discord.py](https://github.com/Rapptz/discord.py)
 
