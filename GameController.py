@@ -110,6 +110,7 @@ class GameController(object):
                 game.currentFilm = gameDict['currentFilm']
                 game.keywordSetList = gameDict['keywordSetList']
                 game.guessedRight = gameDict['guessedRight']
+                game.totalQuestions = gameDict["totalQuestions"]
                 return game
             else:
                 print("Can't deserialize object: " + gameData)
@@ -148,7 +149,7 @@ class GameController(object):
             return "To learn about how to play with oscarbot, type %help"
         elif currGame.state == Game.GS_START:
             return "Let's start a new game! So far you have guessed " \
-                + str(currGame.guessedRight) + "/" + str(currGame.totalQuestions) + " films correctly. " \
+                + str(currGame.guessedRight) + "/" + str(currGame.totalQuestions - 1) + " films correctly. " \
                 + "Your first clue for the next film is:\n" + str(currGame.nextClue())
         elif currGame.state == Game.GS_GUESSING:
             return "Nope, that's not it. Your next clue is:\n" + currGame.nextClue()
@@ -159,9 +160,10 @@ class GameController(object):
         elif currGame.state == Game.GS_FAILED:
             return "You've had ten guesses but failed to guess the film. The answer was:\n" \
                 + self.getAnswer(currGame) + ".\n" \
-                + "Type %start to start a new game. There are " + len(currGame.films) + " films left"
+                + "Type %start to start a new game. There are " + str(len(currGame.films)) + " films left"
         elif currGame.state == Game.GS_END:
-            return "That's all there is! You've attempted to guess all the films!"
+            return "That's all there is! You've attempted to guess all the films!\n"\
+                + "Your end score was: " + str(currGame.guessedRight) + "/" + str(currGame.totalQuestions)
         
 
 

@@ -20,9 +20,23 @@ if(sys.argv[1] == 'run'):
 
     @client.event
     async def on_message(message):
+        print("-------------------")
+        print(message.author.name)
+        if(message.channel.is_private):
+            print("in private channel")
+        else:
+            print("in " + message.channel.server.name + ":" + message.channel.name)
+        print("-------------------")
         print(message.content)
-        if not message.author.name == 'oscarbot':
-            await client.send_message(message.channel, gc.processCommand(message.content, message.author.id))
+        if message.author.name == 'oscarbot':
+            return
+        elif message.channel.is_private:
+             await client.send_message(message.channel, gc.processCommand(message.content, message.author.id))
+        else:
+           for member in message.mentions:
+               if member.name == 'oscarbot':
+                   await client.send_message(message.channel, "Thanks for mentioning me! If you'd like to play a game, send me a private message (PM)")
+                   break
             
     client.run(sys.argv[2])
 
